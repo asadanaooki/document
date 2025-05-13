@@ -1,13 +1,13 @@
-# 商品一覧画面 ― 詳細設計
+# 商品一覧画面 ― 設計
 
 ## 1. 機能要件
 | 項目 | 内容 |
 |------|------|
 | URL | `/products?page={n}&sort={new|high|low}&q={keyword}` |
-| 表示件数 | 設定ファイルから取得 |
+| 表示件数 | 固定 20（SSR ページ遷移） |
 | 並び順 | `new` : created_at DESC, id DESC  /  `high` : price DESC, id DESC  /  `low` : price ASC, id DESC |
 | UI | 検索バー・並び替えセレクト・在庫切れバッジ・ページネーション(前/次＋±2) |
-| 異常系 | `page<1`→1,  空検索→検索フィルタなしとみなす |
+| 異常系 | `page<1`→1,  DB 例外→500,  空検索→一覧リダイレクト |
 
 ## 2. 画面仕様
 
@@ -17,8 +17,8 @@
 | レイアウト | グリッド (PC 4列 / SP 2列) |
 | カード | 画像1枚・商品名(2行切り)・税込価格 |
 | 在庫バッジ | `在庫切れ` 灰色 |
-| ページネーション | `<< ‹ 1 2 3 › >>`  (最大5頁リンク 現在ページ±2) <br>ページリンクは `q` と `sort` を必ずクエリに保持 |
-| 検索バー | XSS対策としてエスケープ |
+| ページネーション | `<< ‹ 1 2 3 › >>`  (最大5頁リンク 現在ページ±2) |
+| 検索バー | XSS対策 |
 | エンプティ表示 | 「該当する検索結果は見つかりませんでした」 |
 
 ## 3. バリデーションチェック
@@ -31,6 +31,7 @@
 
 1. **アクセス受付**  
    - 例: `/products?page=2&sort=high&q=%E3%83%8F%E3%83%B3%E3%83%89%20クリーム`  
+   - IP ごと 5 req/s を超えた場合は 429 (レートリミット)。
 
 2. **バリデーションチェック**  
     **[3. バリデーションチェック](#3-バリデーションチェック)** を参照
@@ -49,13 +50,24 @@
 | **ORDER BY** | - `new`  →  `created_at DESC, product_id DESC`<br>- `high` →  `price DESC,  product_id DESC`<br>- `low`  →  `price ASC,  product_id DESC` | `sort` パラメータで分岐 |
 | **LIMIT / OFFSET** | `LIMIT <size> OFFSET <size> × (page-1)` | `page` と `size` パラメータで変動 |
 
-5. **DB 実行 & 結果取得**  
-   - 検索結果 (≤ **size** 行) と `COUNT(*)` を取得。  
-   - `totalPages = ceil(count / size)` を計算。 
+1. **DB 実行 & 結果取得**  
+   - 検索結果 (≤20 行) と `COUNT(*)` を取得。  
+   - `totalPages = ceil(count / 20)` を計算。  
+   - DB 例外は共通 500 ページへ転送。
 
-6. **DTO 生成**  
+2. **ViewModel 生成**  
    - 各行 → 商品カード (ID / 名称 / 価格 / 在庫フラグ / サムネ URL)。  
-   - `pageNumbers` = **現在ページ ±2 を中心とした最大 5 件のページ番号リスト**を作成
+   - 現在ページ・総ページと共に `ProductPage` にまとめる。
+
+3. **HTML 描画**  
+   - Thymeleaf で `ProductPage` を埋め込み。  
+   - 検索語・商品名は **`th:text`** で XSS 防止。  
+   - ページリンクは `q` と `sort` を必ずクエリに保持。
+
+4. **レスポンス送信**  
+   - ヘッダー: `Cache-Control: no-store` (HTML)。  
+   - 画像は CDN へ `max-age=7d`。  
+   - SlowQuery (>200 ms) を監視し、閾値超過が続けばインデックス追加 → FULLTEXT/N-gram へ移行。
 
 
 ## 4. 保留・後回しメモ ― 何を指しているか
