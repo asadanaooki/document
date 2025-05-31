@@ -1,4 +1,4 @@
-# product-list-backend-test
+# product-detail-backend-test
 
 ## 1. Controller Test
 | ID | Purpose | Input | Expect |
