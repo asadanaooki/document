@@ -19,9 +19,8 @@
 
 ## 3. 処理フロー
 ### 3-1. 初期表示
-1. **リクエスト受付** — `GET /cart`。  
-2. **セッションからカート取得** — 空なら `CartDto.empty()` を返して終了。  
-
+1. **リクエスト受付** — `GET /cart`
+2. **セッションからカート取得** — 空なら `CartDto.empty()` を返して終了。
 3. **商品マスタ一括取得**  
    ```sql
    SELECT
@@ -33,16 +32,26 @@
    WHERE p.product_id IN (:ids);
    ```
 
-4. **CartLineDto 生成・旧価格比較**  
+<a id="cartitemdto"></a>
+4. **CartItemDto 生成・旧価格比較**  
    * 税込単価 = `TaxUtil.inc(price)`。  
    * `prevPrice`（前回表示価格）をセッションから取得。  
-   * `priceChanged = (prevPrice != null && prevPrice != priceIncTax)`  
+   * `priceChanged = ( prevPrice != priceIncTax)`  
    * 行 DTO に `prevPrice` と `priceChanged` をセット。  
    * 行小計 = `priceIncTax × qty`（販売終了 or priceChanged 行でも 0 円計算ルールは同じ）。  
-   * 処理後、`prevPrice = priceIncTax` をセッションへ保存。  
+   * 販売中の商品のみ、`prevPrice = priceIncTax` をセッションへ保存。  
 
-5. **CartDto 生成（コンストラクタ一括計算）**  
+5. **CartViewDto 生成（コンストラクタ一括計算）**  
    合計点数・総額を 1 回のストリームで算出しフィールド固定。 
+
+### 3-2. 削除
+1. **リクエスト受付** — `POST /api/cart/delete/{productId}`
+2. **セッションからカート取得** — 取得できない場合は メッセージ「カートの有効期限が切れました。」 を返す     
+3. **カートから削除**  - `cart.getItems().remove(productId);  ` 
+4. **CartViewDto 生成**  - [CartItemDto 生成・旧価格比較](#cartitemdto) を参照
+5. **レスポンス返却** — 200と メッセージ「削除しました」 を返す
+ 
+### 3-3. 数量変更
 
 
 ## 4. 保留・後回しメモ 
@@ -51,5 +60,5 @@
 |------|-----------|
 | **商品マスタ一括取得クエリ** | SELECT(*)でどれだけ負荷あるか | 
 | **Cart implements Serializable** | implements Serializable付与しないで何が困るか | 
-| **スレッドセーフ** | 複数スレッドでカート追加したときの整合性 |
+| **スレッドセーフ** | 複数タブで操作したときの整合性 |
 

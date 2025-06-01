@@ -24,10 +24,10 @@
 |----|---------|-------|--------|
 | **ST‑01** | Guest flow | `productId = "f9c9cfb2-…5274"`<br>`loginUid = null` | DTO 値：<br>`productName = "Item18"`<br>`productDescription = "Item18の商品説明です。"`<br>`price = 3200`<br>`ratingAvg = 0.0`<br>`reviewCount = 0`<br>`isFav = false`<br>`outOfStock = false` |
 | **ST‑02** | Logged‑in flow | `productId = "f9c9cfb2-…5274"`<br>`loginUid = "550e8400-e29b-41d4-a716-446655420000"` | DTO 値：<br>`productName = "Item18"`<br>`productDescription = "Item18の商品説明です。"`<br>`price = 3200`<br>`ratingAvg = 4.3 or 4.7` ※レビュー内容に合わせて可変<br>`reviewCount = 3`<br>`isFav = true`<br>`outOfStock = false` |
-| **ST‑03** | 新規 | Cart 空 → add("P01", 3) 現行価格 1000 円 | productId="P01", qty=3, priceExTax=1000 |
-| **ST‑04** | 価格上書 | Cart: P01 qty=5 priceEx=1000 → add("P01", 4) 現行価格 1200 円| productId="P01", qty=9, priceExTax=1200 |
-| **ST‑05** | 上限丸め | Cart: P01 qty=15 priceEx=1200 → add("P01", 10) (価格 1200)| productId="P01", qty=20, priceExTax=1200 |
-| **ST‑06** | 商品なし | 存在しないproductId　| ResponseStatusException |
+| **ST‑03** | 新規 | Cart 空 → add("P01", 3) 現行価格 1000 円 |カート１件 productId="P01", qty=3, priceExTax=1000 |
+| **ST‑04** | 価格上書 |カート不変 Cart: P01 qty=5 priceEx=1000 → add("P01", 4) 現行価格 1200 円| productId="P01", qty=9, priceExTax=1200 |
+| **ST‑05** | 上限丸め | カート不変　Cart: P01 qty=15 priceEx=1200 → add("P01", 10) (価格 1200)| productId="P01", qty=20, priceExTax=1200 |
+| **ST‑06** | 商品なし | カート不変　存在しないproductId　| ResponseStatusException |
 
 ---
 
@@ -39,4 +39,13 @@
 | **MD‑02** | Logged‑in user (ratings **4,5,5**) | 同上／`review` 3 件 (4,5,5) | `productName = "Item18"`<br>`productDescription = "Item18の商品説明です。"`<br>`price = 3200`<br>`ratingAvg = 4.7`<br>`reviewCount = 3`<br>`isFav = true`<br>`outOfStock = false` |
 | **MD‑03** | Guest access (no reviews) | `productId = "f9c9cfb2-…5274"`<br>`loginUid = null`<br>`favorite` 行なし<br>`review` 0 件 | `productName = "Item18"`<br>`productDescription = "Item18の商品説明です。"`<br>`price = 3200`<br>`ratingAvg = 0.0`<br>`reviewCount = 0`<br>`isFav = false`<br>`outOfStock = false` |
 | **MD‑04** | 旧価格取得 | id = `1e7b4cd6...` | priceExTax = 750 |
+
+---
+
+
+## 4. 保留・後回しメモ 
+
+| 項目 | 意味・背景 | 
+|------|-----------|
+| **スレッドセーフ** | cartがスレッドセーフでない。現状単一タブ想定 | 
 
